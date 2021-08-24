@@ -12,8 +12,11 @@ const {
 const { BCRYPT_WORK_FACTOR } = require("../config.js");
 
 class User {
-  /**
-   * TODO ADD Docstring
+  /** authenticate user with username, password.
+   *
+   * Returns {username, firstName, lastName, email}
+   *
+   * Throws Unauthorized is user not found found or wrong password.
    */
 
   static async authenticate(username, password) {
@@ -42,6 +45,13 @@ class User {
 
     throw new UnauthorizedError("Invalid username/password");
   }
+
+  /** Register user with data.
+   *
+   * Returns { username, firstName, lastName, email}
+   *
+   * Throws BadRequestError on duplicates.
+   **/
 
   static async register({ username, password, firstName, lastName, email }) {
     const duplicateCheck = await db.query(
@@ -73,7 +83,49 @@ class User {
 
     return user;
   }
-}
 
+  static async findAll(searchTerm) {
+    const { where, vals } = this._filterWhereBuilder(searchTerm);
+
+    const result = await db.query(
+      `SELECT username,
+                  first_name AS "firstName",
+                  last_name AS "lastName",
+                  email
+           FROM users
+           ${where}
+           ORDER BY username`,
+      vals
+    );
+
+    return result.rows;
+  }
+
+  /** Create WHERE clause for filters, to be used by functions that query with filter.
+   *
+   * searchFilters (optional):
+   * - username (will find case-insensitive, partial matches)
+   *
+   * Returns {
+   *  where: "WHERE username ILIKE $1",
+   *  vals: ['%grant%']
+   * }
+   */
+
+  static _filterWhereBuilder(username) {
+    let whereParts = [];
+    let vals = [];
+
+    if (username) {
+      vals.push(`%${username}%`);
+      whereParts.push(`username ILIKE $${vals.length}`);
+    }
+
+    const where =
+      whereParts.length > 0 ? "WHERE " + whereParts.join(" AND ") : "";
+
+    return { where, vals };
+  }
+}
 
 module.exports = User;
