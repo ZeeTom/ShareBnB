@@ -2,7 +2,7 @@
 
 const db = require("../db");
 const bcrypt = require("bcrypt");
-// const { sqlForPartialUpdate } = require("../helpers/sql");
+const { sqlForPartialUpdate } = require("../helpers/sql");
 const {
   NotFoundError,
   BadRequestError,
@@ -43,7 +43,7 @@ class User {
       }
     }
 
-    throw new UnauthorizedError("Invalid username/password");
+    throw new UnauthorizedError("Invalid credentials");
   }
 
   /** Register user with data.
@@ -125,6 +125,107 @@ class User {
       whereParts.length > 0 ? "WHERE " + whereParts.join(" AND ") : "";
 
     return { where, vals };
+  }
+
+  /** Given a username, return data about user.
+   *
+   * Returns { username, firstName, lastName, email, listings }
+   *   where listings is [{ id, title, description, location, price }, ...]
+   *
+   * Throws NotFoundError if user not found.
+   **/
+
+   static async get(username) {
+    const userRes = await db.query(
+          `SELECT username,
+                  first_name AS "firstName",
+                  last_name AS "lastName",
+                  email
+           FROM users
+           WHERE username = $1`,
+        [username],
+    );
+
+    const user = userRes.rows[0];
+
+    if (!user) throw new NotFoundError(`No user: ${username}`);
+
+    // const userListingsRes = await db.query(
+    //       `SELECT id,
+    //               title,
+    //               description,
+    //               location,
+    //               price
+    //        FROM listings
+    //        WHERE username = $1`, [username]);
+
+    // user.listings = userListingsRes.rows;
+    return user;
+  }
+
+  /** Update user data with `data`.
+   *
+   * This is a "partial update" --- it's fine if data doesn't contain
+   * all the fields; this only changes provided ones.
+   *
+   * Data can include:
+   *   { firstName, lastName, password, email }
+   *
+   * Returns { username, firstName, lastName, email }
+   *
+   * Throws NotFoundError if not found.
+   *
+   * WARNING: this function can set a new password or make a user an admin.
+   * Callers of this function must be certain they have validated inputs to this
+   * or a serious security risks are opened.
+   */
+
+   static async update(username, data) {
+    // if (data.password) {
+    //   data.password = await bcrypt.hash(data.password, BCRYPT_WORK_FACTOR);
+    // }
+
+    await this.authenticate(username, data.password);
+    delete data.password;
+
+    const { setCols, values } = sqlForPartialUpdate(
+        data,
+        {
+          firstName: "first_name",
+          lastName: "last_name"
+        });
+    const usernameVarIdx = "$" + (values.length + 1);
+
+    const querySql = `UPDATE users 
+                      SET ${setCols} 
+                      WHERE username = ${usernameVarIdx} 
+                      RETURNING username,
+                                first_name AS "firstName",
+                                last_name AS "lastName",
+                                email`;
+    const result = await db.query(querySql, [...values, username]);
+    const user = result.rows[0];
+
+    if (!user) throw new NotFoundError(`No user: ${username}`);
+
+    return user;
+  }
+
+  /** Delete given user from database; returns undefined. */
+
+  static async remove(username, password) {
+    await this.authenticate(username, password);
+    
+    let result = await db.query(
+          `DELETE
+           FROM users
+           WHERE username = $1
+           RETURNING username`,
+        [username],
+    );
+    const user = result.rows[0];
+
+    if (!user) throw new NotFoundError(`No user: ${username}`);
   }
 }
 
