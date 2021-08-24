@@ -2,7 +2,7 @@
 
 const db = require("../db");
 const bcrypt = require("bcrypt");
-const { sqlForPartialUpdate } = require("../helpers/sql");
+// const { sqlForPartialUpdate } = require("../helpers/sql");
 const {
   NotFoundError,
   BadRequestError,
@@ -10,19 +10,13 @@ const {
 } = require("../expressError");
 
 const { BCRYPT_WORK_FACTOR } = require("../config.js");
-const { UserObj } = require("../helpers/interfaces");
-
-// class User {
 
 class User {
   /**
    * TODO ADD Docstring
    */
 
-  static async authenticate(
-    username: string,
-    password: string
-  ): Promise<void | User> {
+  static async authenticate(username, password) {
     // try to find the user first
     const result = await db.query(
       `SELECT username,
@@ -49,13 +43,7 @@ class User {
     throw new UnauthorizedError("Invalid username/password");
   }
 
-  static async register(
-    { username }: { username: string },
-    { password }: { password: string },
-    { firstName }: { firstName: string },
-    { lastName }: { lastName: string },
-    { email }: { email: string }
-  ): Promise<void | User> {
+  static async register({ username, password, firstName, lastName, email }) {
     const duplicateCheck = await db.query(
       `SELECT username
          FROM users
@@ -75,10 +63,9 @@ class User {
           password,
           first_name,
           last_name,
-          email,
-          is_admin)
-         VALUES ($1, $2, $3, $4, $5, $6)
-         RETURNING username, first_name AS "firstName", last_name AS "lastName", email, is_admin AS "isAdmin"`,
+          email)
+         VALUES ($1, $2, $3, $4, $5)
+         RETURNING username, first_name AS "firstName", last_name AS "lastName", email`,
       [username, hashedPassword, firstName, lastName, email]
     );
 
@@ -87,3 +74,6 @@ class User {
     return user;
   }
 }
+
+
+module.exports = User;
