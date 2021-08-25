@@ -135,15 +135,15 @@ class User {
    * Throws NotFoundError if user not found.
    **/
 
-   static async get(username) {
+  static async get(username) {
     const userRes = await db.query(
-          `SELECT username,
+      `SELECT username,
                   first_name AS "firstName",
                   last_name AS "lastName",
                   email
            FROM users
            WHERE username = $1`,
-        [username],
+      [username]
     );
 
     const user = userRes.rows[0];
@@ -151,23 +151,27 @@ class User {
     if (!user) throw new NotFoundError(`No user: ${username}`);
 
     const userListingsRes = await db.query(
-          `SELECT id,
+      `SELECT id,
                   title,
                   description,
                   location,
                   price
            FROM listings
-           WHERE username = $1`, [username]);
+           WHERE username = $1`,
+      [username]
+    );
 
     user.listings = userListingsRes.rows;
 
     const userBookingsRes = await db.query(
-          `SELECT listing_id as "listingId"
+      `SELECT listing_id as "listingId"
            FROM bookings
            WHERE username = $1
-           ORDER BY listing_id`, [username]);
+           ORDER BY listing_id`,
+      [username]
+    );
 
-    user.bookings = userBookingsRes.rows.map(r => r.listingId);
+    user.bookings = userBookingsRes.rows.map((r) => r.listingId);
 
     return user;
   }
@@ -189,7 +193,7 @@ class User {
    * or a serious security risks are opened.
    */
 
-   static async update(username, data) {
+  static async update(username, data) {
     // if (data.password) {
     //   data.password = await bcrypt.hash(data.password, BCRYPT_WORK_FACTOR);
     // }
@@ -197,12 +201,10 @@ class User {
     await this.authenticate(username, data.password);
     delete data.password;
 
-    const { setCols, values } = sqlForPartialUpdate(
-        data,
-        {
-          firstName: "first_name",
-          lastName: "last_name"
-        });
+    const { setCols, values } = sqlForPartialUpdate(data, {
+      firstName: "first_name",
+      lastName: "last_name",
+    });
     const usernameVarIdx = "$" + (values.length + 1);
 
     const querySql = `UPDATE users 
@@ -224,13 +226,13 @@ class User {
 
   static async remove(username, password) {
     await this.authenticate(username, password);
-    
+
     let result = await db.query(
-          `DELETE
+      `DELETE
            FROM users
            WHERE username = $1
            RETURNING username`,
-        [username],
+      [username]
     );
     const user = result.rows[0];
 
@@ -249,7 +251,9 @@ class User {
               title,
               username
            FROM listings
-           WHERE id = $1`, [listingId]);
+           WHERE id = $1`,
+      [listingId]
+    );
     const listing = preCheck.rows[0];
 
     if (!listing) throw new NotFoundError(`No listing: ${listingId}`);
@@ -257,7 +261,9 @@ class User {
     const preCheck2 = await db.query(
       `SELECT username
            FROM users
-           WHERE username = $1`, [username]);
+           WHERE username = $1`,
+      [username]
+    );
     const user = preCheck2.rows[0];
 
     if (!user) throw new NotFoundError(`No username: ${username}`);
@@ -269,18 +275,21 @@ class User {
     const preCheck3 = await db.query(
       `SELECT listing_id
            FROM bookings
-           WHERE username = $1 AND listing_id = $2`, [username, listingId]);
+           WHERE username = $1 AND listing_id = $2`,
+      [username, listingId]
+    );
     const booking = preCheck3.rows;
 
-    if (booking.length) throw new BadRequestError(`Can't book the same listing twice`);
+    if (booking.length)
+      throw new BadRequestError(`Can't book the same listing twice`);
 
     await db.query(
       `INSERT INTO bookings (username, listing_id)
            VALUES ($1, $2)`,
-      [username, listingId]);
+      [username, listingId]
+    );
 
     return listing.title;
-    
   }
 
   /** Unbook a listing: update db, returns listing title.
@@ -289,20 +298,24 @@ class User {
    * - listingId: listing id
    **/
 
-   static async unBookListing(username, listingId) {
+  static async unBookListing(username, listingId) {
     const preCheck = await db.query(
-          `SELECT id,
+      `SELECT id,
                   title
            FROM listings
-           WHERE id = $1`, [listingId]);
+           WHERE id = $1`,
+      [listingId]
+    );
     const listing = preCheck.rows[0];
 
     if (!listing) throw new NotFoundError(`No listing: ${listingId}`);
 
     const preCheck2 = await db.query(
-          `SELECT username
+      `SELECT username
            FROM users
-           WHERE username = $1`, [username]);
+           WHERE username = $1`,
+      [username]
+    );
     const user = preCheck2.rows[0];
 
     if (!user) throw new NotFoundError(`No username: ${username}`);
@@ -310,31 +323,36 @@ class User {
     const preCheck3 = await db.query(
       `SELECT listing_id
            FROM bookings
-           WHERE username = $1 AND listing_id = $2`, [username, listingId]);
+           WHERE username = $1 AND listing_id = $2`,
+      [username, listingId]
+    );
     const booking = preCheck3.rows;
 
-    if (!booking.length) throw new BadRequestError(`You have not booked this listing`);
+    if (!booking.length)
+      throw new BadRequestError(`You have not booked this listing`);
 
     await db.query(
       `DELETE FROM bookings
            WHERE username = $1 AND listing_id = $2`,
-      [username, listingId]);
+      [username, listingId]
+    );
 
     return listing.title;
-
   }
 
   /**
    * Gets array of listings that user has booked
-   * 
+   *
    * [{ id, title, description, price, location, image }, ...]
-   * 
+   *
    */
   static async getBookings(username) {
     const preCheck1 = await db.query(
       `SELECT username
        FROM users
-       WHERE username = $1`, [username]);
+       WHERE username = $1`,
+      [username]
+    );
     const user = preCheck1.rows[0];
 
     if (!user) throw new NotFoundError(`No username: ${username}`);
@@ -350,9 +368,48 @@ class User {
       FROM users AS u 
         JOIN bookings AS b ON b.username = u.username
         JOIN listings AS l ON b.listing_id = l.id
-      WHERE u.username = $1`, [username]);
+      WHERE u.username = $1`,
+      [username]
+    );
 
     return listings.rows;
+  }
+
+  static async sendMessage(username, toUser, text) {
+    if (username === toUser) {
+      throw new BadRequestError("You cannot message yourself.");
+    }
+
+    const preCheck1 = await db.query(
+      `SELECT username
+       FROM users
+       WHERE username = $1`,
+      [username]
+    );
+    const user1 = preCheck1.rows[0];
+
+    if (!user1) throw new NotFoundError(`No username: ${username}`);
+
+    const preCheck2 = await db.query(
+      `SELECT username
+       FROM users
+       WHERE username = $1`,
+      [toUser]
+    );
+    const user2 = preCheck2.rows[0];
+
+    if (!user2) throw new NotFoundError(`No username: ${toUser}`);
+
+    const response = await db.query(
+      `INSERT INTO messages (from_user, to_user, text)
+           VALUES ($1, $2, $3)
+           RETURNING text, sent_time`,
+      [username, toUser, text]
+    );
+
+    const message = response.rows[0];
+
+    return message;
   }
 }
 

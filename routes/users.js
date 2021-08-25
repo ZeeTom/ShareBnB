@@ -86,15 +86,19 @@ router.delete("/:username", ensureCorrectUser, async function (req, res, next) {
  * Authorization required: correct user
  * */
 
- router.get("/:username/bookings", ensureCorrectUser, async function (req, res, next) {
-  try {
-    const username = req.params.username;
-    const bookings = await User.getBookings(username);
-    return res.json({ bookings });
-  } catch (err) {
-    return next(err);
+router.get(
+  "/:username/bookings",
+  ensureCorrectUser,
+  async function (req, res, next) {
+    try {
+      const username = req.params.username;
+      const bookings = await User.getBookings(username);
+      return res.json({ bookings });
+    } catch (err) {
+      return next(err);
+    }
   }
-});
+);
 
 /** POST /[username]/bookings/[id]
  *
@@ -103,15 +107,19 @@ router.delete("/:username", ensureCorrectUser, async function (req, res, next) {
  * Authorization required: correct user
  * */
 
- router.post("/:username/bookings/:id", ensureCorrectUser, async function (req, res, next) {
-  try {
-    const listingId = +req.params.id;
-    const title = await User.bookListing(req.params.username, listingId);
-    return res.json({ booked: title });
-  } catch (err) {
-    return next(err);
+router.post(
+  "/:username/bookings/:id",
+  ensureCorrectUser,
+  async function (req, res, next) {
+    try {
+      const listingId = +req.params.id;
+      const title = await User.bookListing(req.params.username, listingId);
+      return res.json({ booked: title });
+    } catch (err) {
+      return next(err);
+    }
   }
-});
+);
 
 /** DELETE /[username]/bookings/[id]
  *
@@ -120,14 +128,31 @@ router.delete("/:username", ensureCorrectUser, async function (req, res, next) {
  * Authorization required: correct user
  * */
 
- router.delete("/:username/bookings/:id", ensureCorrectUser, async function (req, res, next) {
-  try {
-    const listingId = +req.params.id;
-    const title = await User.unBookListing(req.params.username, listingId);
-    return res.json({ canceled: title });
-  } catch (err) {
-    return next(err);
+router.delete(
+  "/:username/bookings/:id",
+  ensureCorrectUser,
+  async function (req, res, next) {
+    try {
+      const listingId = +req.params.id;
+      const title = await User.unBookListing(req.params.username, listingId);
+      return res.json({ canceled: title });
+    } catch (err) {
+      return next(err);
+    }
   }
-});
+);
+
+router.post(
+  "/:username/messages/:toUser",
+  ensureCorrectUser,
+  async function (req, res, next) {
+    const message = await User.sendMessage(
+      req.params.username,
+      req.params.toUser,
+      req.body.text
+    );
+    return res.status(201).json({ message });
+  }
+);
 
 module.exports = router;
