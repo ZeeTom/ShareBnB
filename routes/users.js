@@ -38,14 +38,13 @@ router.get("/:username", ensureLoggedIn, async function (req, res, next) {
   } catch (err) {
     return next(err);
   }
-
 });
 
 /** PATCH /[username] { user } => { user }
  *
  * Data can include:
- *   { firstName, lastName, password (required for verification), email } 
- *   
+ *   { firstName, lastName, password (required for verification), email }
+ *
  * Returns { username, firstName, lastName, email }
  *
  * Authorization required: correct user
@@ -57,7 +56,7 @@ router.patch("/:username", ensureCorrectUser, async function (req, res, next) {
   //   const errs = validator.errors.map(e => e.stack);
   //   throw new BadRequestError(errs);
   // }
-  
+
   try {
     const user = await User.update(req.params.username, req.body);
     return res.json({ user });
@@ -71,7 +70,7 @@ router.patch("/:username", ensureCorrectUser, async function (req, res, next) {
  * Authorization required: correct user
  **/
 
- router.delete("/:username", ensureCorrectUser, async function (req, res, next) {
+router.delete("/:username", ensureCorrectUser, async function (req, res, next) {
   try {
     await User.remove(req.params.username, req.body.password);
     return res.json({ deleted: req.params.username });
@@ -79,6 +78,5 @@ router.patch("/:username", ensureCorrectUser, async function (req, res, next) {
     return next(err);
   }
 });
-
 
 module.exports = router;
