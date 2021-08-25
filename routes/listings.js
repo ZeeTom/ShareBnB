@@ -5,7 +5,7 @@
 // const jsonschema = require("jsonschema");
 const express = require("express");
 
-// const { BadRequestError } = require("../expressError");
+const { UnauthorizedError, BadRequestError } = require("../expressError");
 const { ensureLoggedIn, ensureCorrectUser } = require("../middleware/auth");
 const Listing = require("../models/Listing");
 
@@ -58,6 +58,49 @@ router.get("/", ensureLoggedIn, async function (req, res, next) {
 router.get("/:id", ensureLoggedIn, async function (req, res, next) {
   const listing = await Listing.get(req.params.id);
   return res.json({ listing });
+});
+
+/** PATCH /[listingId]  { fld1, fld2, ... } => { listing }
+ *
+ * Data can include: { title, salary, equity }
+ *
+ * Returns { id, title, salary, equity, companyHandle }
+ *
+ * Authorization required: admin
+ */
+
+router.patch("/:id", ensureLoggedIn, async function (req, res, next) {
+  // const validator = jsonschema.validate(req.body, listingUpdateSchema);
+  // if (!validator.valid) {
+  //   const errs = validator.errors.map((e) => e.stack);
+  //   throw new BadRequestError(errs);
+  // }
+  const listing = await Listing.get(req.params.id);
+  const username = listing.username;
+
+  if (username !== res.locals.user.username) {
+    throw new UnauthorizedError();
+  }
+
+  const updatedListing = await Listing.update(req.params.id, req.body);
+  return res.json({ updatedListing });
+});
+
+/** DELETE /[handle]  =>  { deleted: id }
+ *
+ * Authorization required: admin
+ */
+
+router.delete("/:id", ensureLoggedIn, async function (req, res, next) {
+  const listing = await Listing.get(req.params.id);
+  const username = listing.username;
+
+  if (username !== res.locals.user.username) {
+    throw new UnauthorizedError();
+  }
+
+  await Listing.remove(req.params.id);
+  return res.json({ deleted: +req.params.id });
 });
 
 module.exports = router;

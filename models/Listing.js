@@ -2,7 +2,7 @@
 
 const db = require("../db");
 const { BadRequestError, NotFoundError } = require("../expressError");
-// const { sqlForPartialUpdate } = require("../helpers/sql");
+const { sqlForPartialUpdate } = require("../helpers/sql");
 
 class Listing {
   /**
@@ -56,9 +56,8 @@ class Listing {
       whereParts.push(`location ILIKE $${vals.length}`);
     }
 
-    const where = (whereParts.length > 0) ?
-      "WHERE " + whereParts.join(" AND ")
-      : "";
+    const where =
+      whereParts.length > 0 ? "WHERE " + whereParts.join(" AND ") : "";
 
     return { where, vals };
   }
@@ -81,10 +80,13 @@ class Listing {
     }
 
     const { where, vals } = this._filterWhereBuilder({
-      minPrice, maxPrice, location,
+      minPrice,
+      maxPrice,
+      location,
     });
 
-    const listingsRes = await db.query(`
+    const listingsRes = await db.query(
+      `
       SELECT id,
              title,
              description,
@@ -94,17 +96,19 @@ class Listing {
              image
         FROM listings ${where}
         ORDER BY title
-    `, vals);
+    `,
+      vals
+    );
 
     return listingsRes.rows;
   }
 
   /** Given a listing id, return data about listing.
- *
- * Returns { id, title, description, location, price, username, image }
- *
- * Throws NotFoundError if not found.
- **/
+   *
+   * Returns { id, title, description, location, price, username, image }
+   *
+   * Throws NotFoundError if not found.
+   **/
 
   static async get(id) {
     const listingRes = await db.query(
@@ -116,7 +120,9 @@ class Listing {
                     username,
                     image
              FROM listings
-             WHERE id = $1`, [id]);
+             WHERE id = $1`,
+      [id]
+    );
 
     const listing = listingRes.rows[0];
 
@@ -135,6 +141,58 @@ class Listing {
     // listing.company = companiesRes.rows[0];
 
     return listing;
+  }
+
+  /** Update listing data with `data`.
+   *
+   * This is a "partial update" --- it's fine if data doesn't contain
+   * all the fields; this only changes provided ones.
+   *
+   * Data can include: { title, description, location, price, image }
+   *
+   * Returns { id, title, description, location, price, username, image }
+   *
+   * Throws NotFoundError if not found.
+   */
+
+  static async update(id, data) {
+    const { setCols, values } = sqlForPartialUpdate(data, {});
+    const idVarIdx = "$" + (values.length + 1);
+
+    const querySql = `UPDATE listings 
+                        SET ${setCols} 
+                        WHERE id = ${idVarIdx} 
+                        RETURNING id, 
+                                  title, 
+                                  description, 
+                                  location,
+                                  price,
+                                  username,
+                                  image`;
+    const result = await db.query(querySql, [...values, id]);
+    const listing = result.rows[0];
+
+    if (!listing) throw new NotFoundError(`No listing: ${id}`);
+
+    return listing;
+  }
+
+  /** Delete given listing from database; returns undefined.
+   *
+   * Throws NotFoundError if company not found.
+   **/
+
+  static async remove(id) {
+    const result = await db.query(
+      `DELETE
+             FROM listings
+             WHERE id = $1
+             RETURNING id`,
+      [id]
+    );
+    const listing = result.rows[0];
+
+    if (!listing) throw new NotFoundError(`No listing: ${id}`);
   }
 }
 
