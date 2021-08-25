@@ -142,16 +142,33 @@ router.delete(
   }
 );
 
-router.post(
-  "/:username/messages/:toUser",
-  ensureCorrectUser,
-  async function (req, res, next) {
+/** POST /[username]/messages/[otherUser]
+ *
+ * Returns { { message:{ text, sentTime } }
+ *
+ * Authorization required: correct user
+ * */
+
+router.post("/:username/messages/:otherUser", ensureCorrectUser, async function (req, res, next) {
     const message = await User.sendMessage(
       req.params.username,
-      req.params.toUser,
+      req.params.otherUser,
       req.body.text
     );
     return res.status(201).json({ message });
+  }
+);
+
+/** GET /[username]/messages/[otherUser]
+ *
+ * Returns [{ { message:{ text, sentTime } }, ...]
+ *
+ * Authorization required: correct user
+ * */
+
+router.get("/:username/messages/:otherUser", ensureCorrectUser, async function (req, res, next) {
+    const messages = await User.getMessages(req.params.username, req.params.otherUser);
+    return res.json({ messages });
   }
 );
 

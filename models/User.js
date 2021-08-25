@@ -346,6 +346,7 @@ class User {
    * [{ id, title, description, price, location, image }, ...]
    *
    */
+
   static async getBookings(username) {
     const preCheck1 = await db.query(
       `SELECT username
@@ -375,8 +376,16 @@ class User {
     return listings.rows;
   }
 
-  static async sendMessage(username, toUser, text) {
-    if (username === toUser) {
+  /**
+   * Given a username, toUser and text, sends a message from
+   * username to toUser
+   *
+   * returns message: { message:{ text, sentTime } }
+   *
+   */
+
+  static async sendMessage(username, otherUser, text) {
+    if (username === otherUser) {
       throw new BadRequestError("You cannot message yourself.");
     }
 
@@ -394,23 +403,73 @@ class User {
       `SELECT username
        FROM users
        WHERE username = $1`,
-      [toUser]
+      [otherUser]
     );
     const user2 = preCheck2.rows[0];
 
-    if (!user2) throw new NotFoundError(`No username: ${toUser}`);
+    if (!user2) throw new NotFoundError(`No username: ${otherUser}`);
 
     const response = await db.query(
       `INSERT INTO messages (from_user, to_user, text)
            VALUES ($1, $2, $3)
-           RETURNING text, sent_time`,
-      [username, toUser, text]
+           RETURNING text, sent_time AS "sentTime"`,
+      [username, otherUser, text]
     );
 
     const message = response.rows[0];
 
     return message;
   }
+
+  /**
+   * Given a username and otherUser, fetches an array of messages
+   * between the two users
+   *
+   * returns array of messages: [{ message:{ text, sentTime } }, ...]
+   *
+   */
+
+  static async getMessages(username, otherUser) {
+    if (username === otherUser) {
+      throw new BadRequestError("You cannot message yourself.");
+    }
+    
+    const preCheck1 = await db.query(
+      `SELECT username
+       FROM users
+       WHERE username = $1`,
+      [username]
+    );
+    const user1 = preCheck1.rows[0];
+
+    if (!user1) throw new NotFoundError(`No username: ${username}`);
+
+    const preCheck2 = await db.query(
+      `SELECT username
+       FROM users
+       WHERE username = $1`,
+      [otherUser]
+    );
+    const user2 = preCheck2.rows[0];
+
+    if (!user2) throw new NotFoundError(`No username: ${otherUser}`);
+
+    const messageResp = await db.query(
+      `SELECT text,
+              sent_time AS "sentTime",
+              to_user AS "toUser",
+              from_user AS "fromUser"
+          FROM messages
+          WHERE to_user = $1 AND from_user = $2
+            OR from_user = $1 AND to_user = $2
+          ORDER BY sent_time`,
+      [username, otherUser]);
+    
+    const messages = messageResp.rows;
+
+    return messages;
+  }
+
 }
 
 module.exports = User;
