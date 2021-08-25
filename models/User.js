@@ -129,9 +129,9 @@ class User {
 
   /** Given a username, return data about user.
    *
-   * Returns { username, firstName, lastName, email, listings }
+   * Returns { username, firstName, lastName, email, listings, bookings }
    *   where listings is [{ id, title, description, location, price }, ...]
-   *
+   *   where bookings is [listing_id, ...]
    * Throws NotFoundError if user not found.
    **/
 
@@ -150,16 +150,25 @@ class User {
 
     if (!user) throw new NotFoundError(`No user: ${username}`);
 
-    // const userListingsRes = await db.query(
-    //       `SELECT id,
-    //               title,
-    //               description,
-    //               location,
-    //               price
-    //        FROM listings
-    //        WHERE username = $1`, [username]);
+    const userListingsRes = await db.query(
+          `SELECT id,
+                  title,
+                  description,
+                  location,
+                  price
+           FROM listings
+           WHERE username = $1`, [username]);
 
-    // user.listings = userListingsRes.rows;
+    user.listings = userListingsRes.rows;
+
+    const userBookingsRes = await db.query(
+          `SELECT listing_id as "listingId"
+           FROM bookings
+           WHERE username = $1
+           ORDER BY listing_id`, [username]);
+
+    user.bookings = userBookingsRes.rows.map(r => r.listingId);
+
     return user;
   }
 
@@ -226,6 +235,124 @@ class User {
     const user = result.rows[0];
 
     if (!user) throw new NotFoundError(`No user: ${username}`);
+  }
+
+  /** Book a listing: update db, returns listing title.
+   *
+   * - username: username booking listing
+   * - listingId: listing id
+   **/
+
+  static async bookListing(username, listingId) {
+    const preCheck = await db.query(
+      `SELECT id,
+              title,
+              username
+           FROM listings
+           WHERE id = $1`, [listingId]);
+    const listing = preCheck.rows[0];
+
+    if (!listing) throw new NotFoundError(`No listing: ${listingId}`);
+
+    const preCheck2 = await db.query(
+      `SELECT username
+           FROM users
+           WHERE username = $1`, [username]);
+    const user = preCheck2.rows[0];
+
+    if (!user) throw new NotFoundError(`No username: ${username}`);
+
+    if (listing.username === user.username) {
+      throw new BadRequestError(`Can't book own listing`);
+    }
+
+    const preCheck3 = await db.query(
+      `SELECT listing_id
+           FROM bookings
+           WHERE username = $1 AND listing_id = $2`, [username, listingId]);
+    const booking = preCheck3.rows;
+
+    if (booking.length) throw new BadRequestError(`Can't book the same listing twice`);
+
+    await db.query(
+      `INSERT INTO bookings (username, listing_id)
+           VALUES ($1, $2)`,
+      [username, listingId]);
+
+    return listing.title;
+    
+  }
+
+  /** Unbook a listing: update db, returns listing title.
+   *
+   * - username: username unbooking a listing
+   * - listingId: listing id
+   **/
+
+   static async unBookListing(username, listingId) {
+    const preCheck = await db.query(
+          `SELECT id,
+                  title
+           FROM listings
+           WHERE id = $1`, [listingId]);
+    const listing = preCheck.rows[0];
+
+    if (!listing) throw new NotFoundError(`No listing: ${listingId}`);
+
+    const preCheck2 = await db.query(
+          `SELECT username
+           FROM users
+           WHERE username = $1`, [username]);
+    const user = preCheck2.rows[0];
+
+    if (!user) throw new NotFoundError(`No username: ${username}`);
+
+    const preCheck3 = await db.query(
+      `SELECT listing_id
+           FROM bookings
+           WHERE username = $1 AND listing_id = $2`, [username, listingId]);
+    const booking = preCheck3.rows;
+
+    if (!booking.length) throw new BadRequestError(`You have not booked this listing`);
+
+    await db.query(
+      `DELETE FROM bookings
+           WHERE username = $1 AND listing_id = $2`,
+      [username, listingId]);
+
+    return listing.title;
+
+  }
+
+  /**
+   * Gets array of listings that user has booked
+   * 
+   * [{ id, title, description, price, location, image }, ...]
+   * 
+   */
+  static async getBookings(username) {
+    const preCheck1 = await db.query(
+      `SELECT username
+       FROM users
+       WHERE username = $1`, [username]);
+    const user = preCheck1.rows[0];
+
+    if (!user) throw new NotFoundError(`No username: ${username}`);
+
+    const listings = await db.query(
+      `SELECT 
+          l.id,
+          l.title,
+          l.description,
+          l.price,
+          l.location,
+          l.image
+      FROM users AS u 
+        JOIN bookings AS b ON b.username = u.username
+        JOIN listings AS l ON b.listing_id = l.id
+      WHERE u.username = $1`, [username]);
+
+    return listings.rows;
   }
 }
 
