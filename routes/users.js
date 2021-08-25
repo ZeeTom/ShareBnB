@@ -2,18 +2,25 @@
 
 /** Routes for users. */
 
-// const jsonschema = require("jsonschema");
+const jsonschema = require("jsonschema");
 
 const express = require("express");
 const { ensureLoggedIn, ensureCorrectUser } = require("../middleware/auth");
 const { BadRequestError } = require("../expressError");
 const User = require("../models/user");
-// const userNewSchema = require("../schemas/userNew.json");
-// const userUpdateSchema = require("../schemas/userUpdate.json");
+const userSearchSchema = require("../schemas/userSearch.json");
+const userUpdateSchema = require("../schemas/userUpdate.json");
+const messageNewSchema = require("../schemas/messageNew.json");
 
 const router = express.Router();
 
 router.get("/", ensureLoggedIn, async function (req, res, next) {
+  const validator = jsonschema.validate(req.query, userSearchSchema);
+  if (!validator.valid) {
+    const errs = validator.errors.map((e) => e.stack);
+    throw new BadRequestError(errs);
+  }
+
   const searchTerm = req.query.username;
   try {
     const users = await User.findAll(searchTerm);
@@ -51,11 +58,11 @@ router.get("/:username", ensureLoggedIn, async function (req, res, next) {
  **/
 
 router.patch("/:username", ensureCorrectUser, async function (req, res, next) {
-  // const validator = jsonschema.validate(req.body, userUpdateSchema);
-  // if (!validator.valid) {
-  //   const errs = validator.errors.map(e => e.stack);
-  //   throw new BadRequestError(errs);
-  // }
+  const validator = jsonschema.validate(req.body, userUpdateSchema);
+  if (!validator.valid) {
+    const errs = validator.errors.map((e) => e.stack);
+    throw new BadRequestError(errs);
+  }
 
   try {
     const user = await User.update(req.params.username, req.body);
@@ -149,7 +156,16 @@ router.delete(
  * Authorization required: correct user
  * */
 
-router.post("/:username/messages/:otherUser", ensureCorrectUser, async function (req, res, next) {
+router.post(
+  "/:username/messages/:otherUser",
+  ensureCorrectUser,
+  async function (req, res, next) {
+    const validator = jsonschema.validate(req.body, messageNewSchema);
+    if (!validator.valid) {
+      const errs = validator.errors.map((e) => e.stack);
+      throw new BadRequestError(errs);
+    }
+
     const message = await User.sendMessage(
       req.params.username,
       req.params.otherUser,
@@ -166,8 +182,14 @@ router.post("/:username/messages/:otherUser", ensureCorrectUser, async function 
  * Authorization required: correct user
  * */
 
-router.get("/:username/messages/:otherUser", ensureCorrectUser, async function (req, res, next) {
-    const messages = await User.getMessages(req.params.username, req.params.otherUser);
+router.get(
+  "/:username/messages/:otherUser",
+  ensureCorrectUser,
+  async function (req, res, next) {
+    const messages = await User.getMessages(
+      req.params.username,
+      req.params.otherUser
+    );
     return res.json({ messages });
   }
 );

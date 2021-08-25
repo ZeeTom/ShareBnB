@@ -17,7 +17,7 @@ CREATE TABLE listings (
     username VARCHAR(25) NOT NULL
       REFERENCES users ON DELETE CASCADE
 ); 
-
+ 
 CREATE TABLE messages (
     id SERIAL PRIMARY KEY, 
     text TEXT NOT NULL, 

@@ -2,21 +2,25 @@
 
 /** Routes for listings. */
 
-// const jsonschema = require("jsonschema");
+const jsonschema = require("jsonschema");
 const express = require("express");
 
 const { UnauthorizedError, BadRequestError } = require("../expressError");
 const { ensureLoggedIn, ensureCorrectUser } = require("../middleware/auth");
 const Listing = require("../models/Listing");
 
-// const listingNewSchema = require("../schemas/listingNew.json");
-// const listingUpdateSchema = require("../schemas/listingUpdate.json");
-// const listingSearchSchema = require("../schemas/listingSearch.json");
+const listingNewSchema = require("../schemas/listingNew.json");
+const listingUpdateSchema = require("../schemas/listingUpdate.json");
+const listingSearchSchema = require("../schemas/listingSearch.json");
 
 const router = new express.Router();
 
 router.post("/", ensureLoggedIn, async function (req, res, next) {
-  // TODO Schema Validator
+  const validator = jsonschema.validate(req.body, listingNewSchema);
+  if (!validator.valid) {
+    const errs = validator.errors.map((e) => e.stack);
+    throw new BadRequestError(errs);
+  }
   const newListing = await Listing.create(req.body, res.locals.user.username);
   return res.status(201).json({ newListing });
 });
@@ -38,11 +42,11 @@ router.get("/", ensureLoggedIn, async function (req, res, next) {
   if (q.minPrice !== undefined) q.minPrice = +q.minPrice;
   if (q.maxPrice !== undefined) q.maxPrice = +q.maxPrice;
 
-  // const validator = jsonschema.validate(q, companySearchSchema);
-  // if (!validator.valid) {
-  //   const errs = validator.errors.map(e => e.stack);
-  //   throw new BadRequestError(errs);
-  // }
+  const validator = jsonschema.validate(q, listingSearchSchema);
+  if (!validator.valid) {
+    const errs = validator.errors.map((e) => e.stack);
+    throw new BadRequestError(errs);
+  }
 
   const listings = await Listing.findAll(q);
   return res.json({ listings });
@@ -70,11 +74,11 @@ router.get("/:id", ensureLoggedIn, async function (req, res, next) {
  */
 
 router.patch("/:id", ensureLoggedIn, async function (req, res, next) {
-  // const validator = jsonschema.validate(req.body, listingUpdateSchema);
-  // if (!validator.valid) {
-  //   const errs = validator.errors.map((e) => e.stack);
-  //   throw new BadRequestError(errs);
-  // }
+  const validator = jsonschema.validate(req.body, listingUpdateSchema);
+  if (!validator.valid) {
+    const errs = validator.errors.map((e) => e.stack);
+    throw new BadRequestError(errs);
+  }
   const listing = await Listing.get(req.params.id);
   const username = listing.username;
 
