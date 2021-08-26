@@ -17,7 +17,7 @@ const { grant, zach } = require("../projectsecrets");
 const AWS = require("aws-sdk");
 
 const multer = require("multer");
-const upload = multer({ dest: "uploads/" });
+const upload = multer();
 
 const router = new express.Router();
 
@@ -28,23 +28,23 @@ AWS.config.update({
 
 const s3 = new AWS.S3();
 
-async function uploadFile(filename) {
-  const fileContent = await fs.readFile(filename);
-  console.log("############# FILE CONTENT", fileContent);
+async function uploadFile(file) {
   const params = {
     Bucket: "sharebnb-photos-grant",
     Key: "myKey1234.jpg",
-    Body: fileContent,
-    ContentType: "image/JPG",
+    Body: file.buffer,
+    ContentType: file.mimetype,
   };
 
-  s3.upload(params, function (err, data) {
+  await s3.upload(params, function (err, data) {
     if (err) {
       console.log("Error uploading data: ", err);
     } else {
       console.log(`Successfully uploaded data to ${data.Location}`);
     }
   });
+  
+  return `https://sharebnb-photos-grant.s3.amazonaws.com/${params.Key}`
 }
 
 router.post("/", upload.single("image"), async function (req, res, next) {
@@ -56,15 +56,8 @@ router.post("/", upload.single("image"), async function (req, res, next) {
     throw new BadRequestError(errs);
   }
 
-  console.log("#############", req.file);
-  
-  fs.writeFile("./image.png", req.file.filename, function(err, res) {
-    if (err) {
-      console.log("Error uploading data: ", err);
-    } else {
-      console.log(`Success`);
-    }
-  })
+  let url = await uploadFile(req.file);
+
 
   const newListing = await Listing.create(req.body, "u1");
   return res.status(201).json({ newListing });
