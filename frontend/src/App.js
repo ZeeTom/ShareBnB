@@ -21,9 +21,10 @@ function App() {
     console.log("listing data is", listingData);
     const newListing = await axios.post(`${BASE_URL}/listings`, listingData, {
       headers: {
-      "Content-type": "multipart/form-data"
-    }
-  });
+        "Content-type": "multipart/form-data",
+      },
+    });
+    console.log(newListing);
     setListings((oldListings) => [...oldListings, newListing]);
   }
 

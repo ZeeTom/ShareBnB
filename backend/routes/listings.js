@@ -15,6 +15,7 @@ const listingUpdateSchema = require("../schemas/listingUpdate.json");
 const listingSearchSchema = require("../schemas/listingSearch.json");
 const { grant, zach } = require("../projectsecrets");
 const AWS = require("aws-sdk");
+const { v4 } = require("uuid");
 
 const multer = require("multer");
 const upload = multer();
@@ -30,21 +31,25 @@ const s3 = new AWS.S3();
 
 async function uploadFile(file) {
   const params = {
-    Bucket: "sharebnb-photos-grant",
-    Key: "myKey1234.jpg",
+    Bucket: "sharebnb-listing-photos-zach",
+    Key: v4(),
     Body: file.buffer,
     ContentType: file.mimetype,
   };
 
-  await s3.upload(params, function (err, data) {
-    if (err) {
-      console.log("Error uploading data: ", err);
-    } else {
-      console.log(`Successfully uploaded data to ${data.Location}`);
-    }
-  });
-  
-  return `https://sharebnb-photos-grant.s3.amazonaws.com/${params.Key}`
+  console.log("PARAMS IS", params);
+
+  await s3
+    .upload(params, function (err, data) {
+      if (err) {
+        console.log("Error uploading data: ", err);
+      } else {
+        console.log(`Successfully uploaded data to ${data.Location}`);
+      }
+    })
+    .promise();
+
+  return `https://sharebnb-listing-photos-zach.s3.amazonaws.com/${params.Key}`;
 }
 
 router.post("/", upload.single("image"), async function (req, res, next) {
@@ -57,9 +62,10 @@ router.post("/", upload.single("image"), async function (req, res, next) {
   }
 
   let url = await uploadFile(req.file);
+  formData.image = url || null;
 
+  const newListing = await Listing.create(formData, "u1");
 
-  const newListing = await Listing.create(req.body, "u1");
   return res.status(201).json({ newListing });
 });
 

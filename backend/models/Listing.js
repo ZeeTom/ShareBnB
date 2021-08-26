@@ -4,21 +4,25 @@ const db = require("../db");
 const { BadRequestError, NotFoundError } = require("../expressError");
 const { sqlForPartialUpdate } = require("../helpers/sql");
 
-const DEFAULT_IMAGE = 'https://sharebnb-photos-grant.s3.amazonaws.com/sharebnb-photos/listing-picture1.jpg';
+const DEFAULT_IMAGE =
+  "https://sharebnb-photos-grant.s3.amazonaws.com/sharebnb-photos/listing-picture1.jpg";
 
 class Listing {
   /**
    * TODO: add docstring
    */
 
-  static async create({ title, description, location, price }, username) {
+  static async create(
+    { title, description, location, price, image },
+    username
+  ) {
     const result = await db.query(
       `INSERT INTO listings
-          (title, description, location, price, username)
+          (title, description, location, price, username, image)
           VALUES
-          ($1, $2, $3, $4, $5)
+          ($1, $2, $3, $4, $5, $6)
           RETURNING id, title, description, location, price, username, image`,
-      [title, description, location, price, username]
+      [title, description, location, price, username, image]
     );
 
     const listing = result.rows[0];
