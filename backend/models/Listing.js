@@ -4,6 +4,8 @@ const db = require("../db");
 const { BadRequestError, NotFoundError } = require("../expressError");
 const { sqlForPartialUpdate } = require("../helpers/sql");
 
+const DEFAULT_IMAGE = 'https://sharebnb-photos-grant.s3.amazonaws.com/sharebnb-photos/listing-picture1.jpg';
+
 class Listing {
   /**
    * TODO: add docstring

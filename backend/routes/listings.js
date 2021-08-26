@@ -36,7 +36,7 @@ router.post("/", ensureLoggedIn, async function (req, res, next) {
  * Authorization required: logged in
  */
 
-router.get("/", ensureLoggedIn, async function (req, res, next) {
+router.get("/", async function (req, res, next) {
   const q = req.query;
   // arrive as strings from querystring, but we want as ints
   if (q.minPrice !== undefined) q.minPrice = +q.minPrice;
