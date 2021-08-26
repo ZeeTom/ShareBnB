@@ -3,10 +3,10 @@ import React, { useState, useEffect } from "react";
 function AddListingForm({ add }) {
   
   const [formData, setFormData] = useState({
-    title: "",
-    description: "",
-    price: "",
-    location: "",
+    title: "test",
+    description: "test",
+    price: "1000",
+    location: "Mexico",
     image: null
   });
 
