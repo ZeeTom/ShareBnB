@@ -12,12 +12,27 @@ const Listing = require("../models/Listing");
 const listingNewSchema = require("../schemas/listingNew.json");
 const listingUpdateSchema = require("../schemas/listingUpdate.json");
 const listingSearchSchema = require("../schemas/listingSearch.json");
+const { grant, zach } = require("../projectsecrets");
+const AWS = require("aws-sdk");
+
+const multer = require("multer");
+const upload = multer({ dest: "uploads/" });
 
 const router = new express.Router();
 
-router.post("/", async function (req, res, next) {
-  console.log(req.body);
-  const validator = jsonschema.validate(req.body, listingNewSchema);
+AWS.config.update({
+  accessKeyId: grant,
+  secretAccessKey: zach,
+});
+
+const s3 = new AWS.S3();
+
+router.post("/", upload.single("image"), async function (req, res, next) {
+  // console.log(req.file);
+  // console.log(req.body);
+  const formData = { ...req.body, price: +req.body.price };
+  console.log("THIS IS FORM DATA", formData);
+  const validator = jsonschema.validate(formData, listingNewSchema);
   if (!validator.valid) {
     const errs = validator.errors.map((e) => e.stack);
     throw new BadRequestError(errs);
