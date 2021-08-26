@@ -28,8 +28,8 @@ AWS.config.update({
 
 const s3 = new AWS.S3();
 
-function uploadFile(filename) {
-  const fileContent = fs.readFileSync(filename);
+async function uploadFile(filename) {
+  const fileContent = await fs.readFile(filename);
   console.log("############# FILE CONTENT", fileContent);
   const params = {
     Bucket: "sharebnb-photos-grant",
@@ -57,8 +57,14 @@ router.post("/", upload.single("image"), async function (req, res, next) {
   }
 
   console.log("#############", req.file);
-
-  // uploadFile('backend/routes/listing-picture1.jpg');
+  
+  fs.writeFile("./image.png", req.file.filename, function(err, res) {
+    if (err) {
+      console.log("Error uploading data: ", err);
+    } else {
+      console.log(`Success`);
+    }
+  })
 
   const newListing = await Listing.create(req.body, "u1");
   return res.status(201).json({ newListing });
