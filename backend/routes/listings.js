@@ -4,7 +4,7 @@
 
 const jsonschema = require("jsonschema");
 const express = require("express");
-const fs = require('fs');
+const fs = require("fs");
 
 const { UnauthorizedError, BadRequestError } = require("../expressError");
 const { ensureLoggedIn, ensureCorrectUser } = require("../middleware/auth");
@@ -28,25 +28,23 @@ AWS.config.update({
 
 const s3 = new AWS.S3();
 
-
-
 function uploadFile(filename) {
   const fileContent = fs.readFileSync(filename);
   console.log("############# FILE CONTENT", fileContent);
   const params = {
-    Bucket: 'sharebnb-photos-grant',
-    Key: 'myKey1234.jpg',
+    Bucket: "sharebnb-photos-grant",
+    Key: "myKey1234.jpg",
     Body: fileContent,
-    ContentType: 'image/JPG'
+    ContentType: "image/JPG",
   };
 
-  s3.upload(params, function(err, data) {
+  s3.upload(params, function (err, data) {
     if (err) {
-      console.log("Error uploading data: ", err)
+      console.log("Error uploading data: ", err);
     } else {
       console.log(`Successfully uploaded data to ${data.Location}`);
     }
-  })
+  });
 }
 
 router.post("/", upload.single("image"), async function (req, res, next) {
@@ -58,10 +56,9 @@ router.post("/", upload.single("image"), async function (req, res, next) {
     throw new BadRequestError(errs);
   }
 
-  console.log("#############",req.file);
+  console.log("#############", req.file);
 
   // uploadFile('backend/routes/listing-picture1.jpg');
-  
 
   const newListing = await Listing.create(req.body, "u1");
   return res.status(201).json({ newListing });
