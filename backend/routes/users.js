@@ -156,25 +156,25 @@ router.delete(
  * Authorization required: correct user
  * */
 
-router.post(
-  "/:username/messages/:otherUser",
-  ensureCorrectUser,
-  async function (req, res, next) {
-    const validator = jsonschema.validate(req.body, messageNewSchema);
-    if (!validator.valid) {
-      const errs = validator.errors.map((e) => e.stack);
-      throw new BadRequestError(errs);
-    }
-
-    const message = await User.sendMessage(
-      req.params.username,
-      req.params.otherUser,
-      req.body.text
-    );
-    return res.status(201).json({ message });
+router.post("/:username/messages/:otherUser", async function (req, res, next) {
+  const validator = jsonschema.validate(req.body, messageNewSchema);
+  if (!validator.valid) {
+    const errs = validator.errors.map((e) => e.stack);
+    throw new BadRequestError(errs);
   }
-);
 
+  const message = await User.sendMessage(
+    req.params.username,
+    req.params.otherUser,
+    req.body.text
+  );
+  return res.status(201).json({ message });
+});
+
+router.get("/:username/messages", async function (req, res, next) {
+  const users = await User.getInboxUsers(req.params.username);
+  return res.json({ users });
+});
 /** GET /[username]/messages/[otherUser]
  *
  * Returns [{ { message:{ text, sentTime } }, ...]
@@ -182,15 +182,12 @@ router.post(
  * Authorization required: correct user
  * */
 
-router.get(
-  "/:username/messages/:otherUser",
-  async function (req, res, next) {
-    const messages = await User.getMessages(
-      req.params.username,
-      req.params.otherUser
-    );
-    return res.json({ messages });
-  }
-);
+router.get("/:username/messages/:otherUser", async function (req, res, next) {
+  const messages = await User.getMessages(
+    req.params.username,
+    req.params.otherUser
+  );
+  return res.json({ messages });
+});
 
 module.exports = router;

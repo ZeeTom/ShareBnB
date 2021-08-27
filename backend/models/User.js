@@ -433,7 +433,7 @@ class User {
     if (username === otherUser) {
       throw new BadRequestError("You cannot message yourself.");
     }
-    
+
     const preCheck1 = await db.query(
       `SELECT username
        FROM users
@@ -463,13 +463,52 @@ class User {
           WHERE to_user = $1 AND from_user = $2
             OR from_user = $1 AND to_user = $2
           ORDER BY sent_time`,
-      [username, otherUser]);
-    
+      [username, otherUser]
+    );
+
     const messages = messageResp.rows;
 
     return messages;
   }
 
+  static async getInboxUsers(username) {
+    // if (username === otherUser) {
+    //   throw new BadRequestError("You cannot message yourself.");
+    // }
+
+    const preCheck1 = await db.query(
+      `SELECT username
+       FROM users
+       WHERE username = $1`,
+      [username]
+    );
+    const user1 = preCheck1.rows[0];
+
+    if (!user1) throw new NotFoundError(`No username: ${username}`);
+
+    const resp = await db.query(
+      `SELECT
+      MAX(sent_time) AS "sentTime",
+       to_user AS "toUser",
+       from_user AS "fromUser"
+        FROM messages
+        WHERE to_user = $1 
+        OR from_user = $1
+        GROUP BY to_user, from_user
+        ORDER BY MAX(sent_time) DESC;
+          `,
+      [username]
+    );
+
+    const messagesMetaData = resp.rows;
+    let inboxUsers = messagesMetaData.map((m) =>
+      m.fromUser === username ? m.toUser : m.fromUser
+    );
+
+    inboxUsers = Array.from(new Set(inboxUsers));
+
+    return inboxUsers;
+  }
 }
 
 module.exports = User;
