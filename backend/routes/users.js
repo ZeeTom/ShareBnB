@@ -175,6 +175,7 @@ router.get("/:username/messages", async function (req, res, next) {
   const users = await User.getInboxUsers(req.params.username);
   return res.json({ users });
 });
+
 /** GET /[username]/messages/[otherUser]
  *
  * Returns [{ { message:{ text, sentTime } }, ...]
