@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import Listings from "./Listings";
 import axios from "axios";
 import AddListingForm from "./AddListingForm";
+import Conversation from './Conversation';
 
 const BASE_URL = "http://localhost:3001";
 
@@ -31,7 +32,8 @@ function App() {
   return (
     <div className="App">
       {/* <Listings listings={listings}/> */}
-      <AddListingForm add={addListing} />
+      {/* <AddListingForm add={addListing} /> */}
+      <Conversation />
     </div>
   );
 }

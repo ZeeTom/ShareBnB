@@ -184,7 +184,6 @@ router.post(
 
 router.get(
   "/:username/messages/:otherUser",
-  ensureCorrectUser,
   async function (req, res, next) {
     const messages = await User.getMessages(
       req.params.username,
